@@ -1,6 +1,7 @@
 #pragma once
 #include <WiFi.h>
 #include <WebServer.h>
+#include <DNSServer.h>
 #include "gopro_ble.h"
 #include "settings.h"
 #include "bonded_cameras.h"
@@ -13,6 +14,12 @@
 // статусом GoPro, настройками триггера записи и списком привязанных
 // камер. Затем сам выключает Wi-Fi, чтобы не мешать BLE/UART в обычном
 // режиме работы моста.
+//
+// Captive portal: DNS-сервер отвечает адресом платы на ЛЮБОЕ доменное
+// имя, поэтому запросы ОС на проверку интернета (Android/iOS/Windows)
+// попадают на наш веб-сервер и получают не то, что ожидали — система
+// сама детектирует "портал с авторизацией" и открывает браузер на
+// 10.0.0.1 автоматически, без ручного ввода адреса.
 // ---------------------------------------------------------------------
 
 class StatusPortal {
@@ -37,6 +44,8 @@ public:
         _server.on("/forget-camera", HTTP_POST, [this]() { handleForgetCamera(); });
         _server.onNotFound([this]() { handleRoot(); });
         _server.begin();
+
+        _dnsServer.start(53, "*", IPAddress(10, 0, 0, 1));
     }
 
     // Вызывать из loop(). Возвращает true, пока портал активен.
@@ -44,6 +53,7 @@ public:
         if (!_active) return false;
 
         _lastStatus = goProStatus;
+        _dnsServer.processNextRequest();
         _server.handleClient();
 
         if (millis() - _startMs > AP_DURATION_MS) {
@@ -56,12 +66,14 @@ private:
     static constexpr const char *FIRMWARE_VERSION = "0.1";
 
     WebServer _server{80};
+    DNSServer _dnsServer;
     uint32_t _startMs = 0;
     bool _active = false;
     GoProBle::Status _lastStatus;
     Settings *_settings = nullptr;
 
     void stop() {
+        _dnsServer.stop();
         _server.stop();
         WiFi.softAPdisconnect(true);
         WiFi.mode(WIFI_OFF);
