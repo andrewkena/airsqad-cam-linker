@@ -4,6 +4,7 @@
 #include "msp_fc.h"
 #include "settings.h"
 #include "status_portal.h"
+#include "status_led.h"
 
 // ---------------------------------------------------------------------
 // UART к полётному контроллеру (MSP).
@@ -28,11 +29,16 @@ static constexpr uint16_t AUX_SWITCH_THRESHOLD = 1700;
 static constexpr int PAIRING_BUTTON_PIN = 9;
 static constexpr uint32_t PAIRING_HOLD_MS = 2000;
 
+// Встроенный светодиод на большинстве клонов ESP32-C3 SuperMini (активный LOW).
+// Если на вашей плате его нет/он на другом пине — поменяйте здесь.
+static constexpr int STATUS_LED_PIN = 8;
+
 HardwareSerial mspSerial(1);
 GoProBle goPro;
 StatusPortal portal;
 Settings settings;
 MspFc mspFc;
+StatusLed statusLed;
 
 uint32_t lastOsdUpdate = 0;
 bool recordingActive = false;
@@ -152,6 +158,7 @@ void setup() {
     Serial.println("GoPro <-> Betaflight OSD bridge starting...");
 
     pinMode(PAIRING_BUTTON_PIN, INPUT_PULLUP);
+    statusLed.begin(STATUS_LED_PIN, true);
 
     settings.load();
 
@@ -177,6 +184,18 @@ void loop() {
     goPro.loop();
     mspFc.loop();
     checkPairingButton();
+
+    StatusLed::Pattern ledPattern;
+    if (goPro.isPairing()) {
+        ledPattern = StatusLed::Pattern::BLINK_SLOW;
+    } else if (!goPro.status.connected) {
+        ledPattern = StatusLed::Pattern::OFF;
+    } else if (goPro.status.recording) {
+        ledPattern = StatusLed::Pattern::BLINK_FAST;
+    } else {
+        ledPattern = StatusLed::Pattern::SOLID;
+    }
+    statusLed.update(ledPattern);
 
     uint32_t now = millis();
     if (now - lastOsdUpdate > OSD_UPDATE_INTERVAL_MS) {
