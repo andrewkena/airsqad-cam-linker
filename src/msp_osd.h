@@ -5,7 +5,11 @@
 // MSPv2 -> Betaflight "Custom message" OSD elements
 //
 // Command:   MSP2_SET_TEXT = 0x3007
-// Payload:   [text_type][ascii bytes, NOT null-terminated]
+// Payload:   [text_type][length][ascii bytes, NOT null-terminated]
+// Подтверждено по исходникам Betaflight (src/main/msp/msp.c, обработчик
+// MSP2_SET_TEXT): "type byte, then length byte followed by the actual
+// characters" — без байта length FC принимает первый символ текста за
+// длину строки и съедает его при разборе.
 // text_type для custom-сообщений: MSP2TEXT_CUSTOM_MSG_0 + index
 //   MSP2TEXT_CUSTOM_MSG_0 = 7  (см. src/main/msp/msp_protocol_v2_betaflight.h
 //   в исходниках Betaflight — проверено по актуальному master)
@@ -63,13 +67,14 @@ inline void sendMspV2(Stream &port, uint16_t function, const uint8_t *payload, u
 inline void setCustomMessage(Stream &port, uint8_t index, const char *text) {
     if (index >= CUSTOM_MSG_MAX_NUM) return;
 
-    uint8_t payload[1 + CUSTOM_MSG_MAX_LEN];
-    payload[0] = MSP2TEXT_CUSTOM_MSG_0 + index;
-
+    uint8_t payload[2 + CUSTOM_MSG_MAX_LEN];
     size_t len = strnlen(text, CUSTOM_MSG_MAX_LEN);
-    memcpy(&payload[1], text, len);
 
-    sendMspV2(port, MSP2_SET_TEXT, payload, 1 + len);
+    payload[0] = MSP2TEXT_CUSTOM_MSG_0 + index;
+    payload[1] = (uint8_t)len;
+    memcpy(&payload[2], text, len);
+
+    sendMspV2(port, MSP2_SET_TEXT, payload, 2 + len);
 }
 
 } // namespace mspOsd
