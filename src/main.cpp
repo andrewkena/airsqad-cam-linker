@@ -52,6 +52,29 @@ void buildFieldText(OsdField field, char *out, size_t outSize) {
             // на текстовые статусы (OK/FULL/ERROR и т.д.).
             snprintf(out, outSize, "SD %u", goPro.status.sdStatus);
             break;
+        case OsdField::OVERHEATING:
+            snprintf(out, outSize, goPro.status.overheating ? "HOT" : "TEMP OK");
+            break;
+        case OsdField::REMAINING_VIDEO_TIME: {
+            uint32_t s = goPro.status.remainingVideoTimeSec;
+            snprintf(out, outSize, "TIME %lu:%02lu", (unsigned long)(s / 60), (unsigned long)(s % 60));
+            break;
+        }
+        case OsdField::SD_REMAINING:
+            snprintf(out, outSize, "FREE %luMB", (unsigned long)(goPro.status.sdRemainingKB / 1024));
+            break;
+        case OsdField::SD_CAPACITY:
+            snprintf(out, outSize, "CAP %luMB", (unsigned long)(goPro.status.sdCapacityKB / 1024));
+            break;
+        case OsdField::SD_ERRORS:
+            snprintf(out, outSize, "SD ERR %u", goPro.status.sdErrors);
+            break;
+        case OsdField::BUSY:
+            snprintf(out, outSize, goPro.status.busy ? "BUSY" : "READY");
+            break;
+        case OsdField::BATTERY_BARS:
+            snprintf(out, outSize, "BAT BARS %u", goPro.status.batteryBars);
+            break;
         case OsdField::NONE:
         default:
             out[0] = '\0';

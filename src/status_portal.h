@@ -84,7 +84,7 @@ private:
                 char argName[10];
                 snprintf(argName, sizeof(argName), "osdField%u", i);
                 int field = _server.arg(argName).toInt();
-                if (field < 0 || field > (int)OsdField::SD_STATUS) field = 0;
+                if (field < 0 || field > (int)OSD_FIELD_MAX) field = 0;
                 _settings->osdSlotField[i] = (OsdField)field;
             }
 
@@ -96,18 +96,25 @@ private:
 
     static const char *fieldLabel(OsdField field) {
         switch (field) {
-            case OsdField::CONNECTION: return "Статус подключения";
-            case OsdField::RECORDING:  return "Идёт запись";
-            case OsdField::BATTERY:    return "Заряд батареи";
-            case OsdField::SD_STATUS:  return "Статус SD-карты";
+            case OsdField::CONNECTION:           return "Статус подключения";
+            case OsdField::RECORDING:            return "Идёт запись";
+            case OsdField::BATTERY:              return "Заряд батареи, %";
+            case OsdField::SD_STATUS:            return "Статус SD-карты";
+            case OsdField::OVERHEATING:          return "Перегрев";
+            case OsdField::REMAINING_VIDEO_TIME: return "Осталось времени записи";
+            case OsdField::SD_REMAINING:         return "Свободно на SD";
+            case OsdField::SD_CAPACITY:          return "Ёмкость SD";
+            case OsdField::SD_ERRORS:            return "Ошибки SD-карты";
+            case OsdField::BUSY:                 return "Занята (busy/ready)";
+            case OsdField::BATTERY_BARS:         return "Заряд батареи, делений";
             case OsdField::NONE:
-            default:                   return "Не используется";
+            default:                             return "Не используется";
         }
     }
 
     String osdFieldSelect(uint8_t slotIndex, OsdField current) const {
         String out = "<select name='osdField" + String(slotIndex) + "'>";
-        for (uint8_t f = (uint8_t)OsdField::NONE; f <= (uint8_t)OsdField::SD_STATUS; f++) {
+        for (uint8_t f = (uint8_t)OsdField::NONE; f <= OSD_FIELD_MAX; f++) {
             out += "<option value='" + String(f) + "'" + (f == (uint8_t)current ? " selected" : "") +
                    ">" + fieldLabel((OsdField)f) + "</option>";
         }

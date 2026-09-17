@@ -10,11 +10,19 @@ enum class RecTriggerMode : uint8_t { AIR = 0, SWITCH = 1 };
 // Что выводить в конкретном слоте OSD_CUSTOM_MSG (1..4).
 enum class OsdField : uint8_t {
     NONE = 0,
-    CONNECTION = 1, // GP OK / GP ---
-    RECORDING = 2,  // REC / IDLE
-    BATTERY = 3,    // BAT NN%
-    SD_STATUS = 4,  // SD <код>
+    CONNECTION = 1,            // GP OK / GP ---
+    RECORDING = 2,             // REC / IDLE
+    BATTERY = 3,               // BAT NN%
+    SD_STATUS = 4,             // SD <код>
+    OVERHEATING = 5,           // HOT / OK
+    REMAINING_VIDEO_TIME = 6,  // TIME MM:SS
+    SD_REMAINING = 7,          // SD FREE <N>MB
+    SD_CAPACITY = 8,           // SD CAP <N>MB
+    SD_ERRORS = 9,             // SD ERR <код>
+    BUSY = 10,                 // BUSY / READY
+    BATTERY_BARS = 11,         // BAT BARS <N>
 };
+constexpr uint8_t OSD_FIELD_MAX = (uint8_t)OsdField::BATTERY_BARS;
 
 struct Settings {
     static constexpr uint8_t OSD_SLOT_COUNT = 4;
