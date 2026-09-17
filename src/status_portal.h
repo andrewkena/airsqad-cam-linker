@@ -150,7 +150,7 @@ private:
 
         html += "<!DOCTYPE html><html><head><meta charset='utf-8'>"
                 "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-                "<title>AIR SQAD Cam Linker</title><style>"
+                "<title>AIRSQAD Cam Linker</title><style>"
                 "body{background:#2b2b2b;color:#e0e0e0;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;"
                 "text-align:center;margin:0;padding:40px 20px;}"
                 "h1{font-size:1.6em;font-weight:600;margin:0 0 16px 0;}"
@@ -172,7 +172,7 @@ private:
                 ".footer{color:#777;font-size:0.8em;margin-top:32px;}"
                 "</style></head><body>";
 
-        html += "<h1>AIR SQAD Cam Linker</h1><hr>";
+        html += "<h1>AIRSQAD Cam Linker</h1><hr>";
         html += "<div class='version'>Version: " + String(FIRMWARE_VERSION) + "</div>";
 
         char batteryStr[8];

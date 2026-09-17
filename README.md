@@ -1,4 +1,4 @@
-# gopro-osd-bridge
+# AIRSQAD Cam Linker
 
 Мост между экшн-камерой **GoPro 11** и OSD полётного контроллера на **Betaflight**.
 

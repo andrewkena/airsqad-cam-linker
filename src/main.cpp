@@ -155,7 +155,7 @@ void updateRecordingTrigger() {
 void setup() {
     Serial.begin(115200);
     delay(200);
-    Serial.println("GoPro <-> Betaflight OSD bridge starting...");
+    Serial.println("AIRSQAD Cam Linker starting...");
 
     pinMode(PAIRING_BUTTON_PIN, INPUT_PULLUP);
     statusLed.begin(STATUS_LED_PIN, true);

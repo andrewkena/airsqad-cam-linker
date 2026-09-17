@@ -74,7 +74,7 @@ public:
     // активным сканированием (иначе Wi-Fi точка доступа перестаёт отвечать).
     void begin(const std::string &wantedNamePrefix = "GoPro") {
         _namePrefix = wantedNamePrefix;
-        NimBLEDevice::init("ESP32-OSD-Bridge");
+        NimBLEDevice::init("AIRSQAD Cam Linker");
         // GoPro требует bonding для части характеристик — включаем заранее.
         NimBLEDevice::setSecurityAuth(true, true, true);
     }
