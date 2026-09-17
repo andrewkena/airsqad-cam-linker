@@ -22,6 +22,7 @@ GoProBle goPro;
 StatusPortal portal;
 
 uint32_t lastOsdUpdate = 0;
+bool goProStarted = false;
 
 void updateOsd() {
     char text[mspOsd::CUSTOM_MSG_MAX_LEN + 1];
@@ -48,16 +49,23 @@ void setup() {
 
     mspSerial.begin(MSP_BAUD, SERIAL_8N1, MSP_RX_PIN, MSP_TX_PIN);
 
-    goPro.begin("GoPro"); // подставьте точное имя устройства при необходимости
-
     // Первые 30 секунд после включения: точка доступа
     // "AIRSQAD Cam Linker" на 10.0.0.1 со страницей статуса/настроек.
+    // BLE к GoPro пока не поднимаем — активное сканирование делит один
+    // радиомодуль ESP32-C3 с Wi-Fi и "убивает" отзывчивость точки доступа.
     portal.begin("AIRSQAD Cam Linker", "12345678");
 }
 
 void loop() {
-    goPro.loop();
-    portal.loop(goPro.status);
+    bool portalActive = portal.loop(goPro.status);
+
+    if (!portalActive) {
+        if (!goProStarted) {
+            goPro.begin("GoPro"); // подставьте точное имя устройства при необходимости
+            goProStarted = true;
+        }
+        goPro.loop();
+    }
 
     uint32_t now = millis();
     if (now - lastOsdUpdate > OSD_UPDATE_INTERVAL_MS) {
