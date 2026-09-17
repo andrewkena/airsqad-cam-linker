@@ -7,6 +7,8 @@
 
 enum class RecTriggerMode : uint8_t { AIR = 0, SWITCH = 1 };
 
+enum class UiLanguage : uint8_t { EN = 0, RU = 1 };
+
 // Тип камеры. На данный момент реально реализован только GOPRO (Open GoPro
 // BLE spec) — DJI и INSTA360 добавлены в интерфейс настроек как задел на
 // будущее: их BLE-протоколы сложнее (нет открытой спецификации у DJI;
@@ -35,6 +37,7 @@ struct Settings {
     static constexpr uint8_t OSD_SLOT_COUNT = 4;
 
     CameraType cameraType = CameraType::GOPRO;
+    UiLanguage language = UiLanguage::EN;
     RecTriggerMode triggerMode = RecTriggerMode::AIR;
     uint8_t triggerAuxChannel = 1; // AUX1..AUX8 (1-based), используется только в режиме SWITCH
     bool stopOnDisarm = true;
@@ -51,6 +54,7 @@ struct Settings {
         Preferences prefs;
         prefs.begin("cfg", true);
         cameraType = (CameraType)prefs.getUChar("camType", (uint8_t)CameraType::GOPRO);
+        language = (UiLanguage)prefs.getUChar("uiLang", (uint8_t)UiLanguage::EN);
         triggerMode = (RecTriggerMode)prefs.getUChar("trigMode", (uint8_t)RecTriggerMode::AIR);
         triggerAuxChannel = prefs.getUChar("trigAux", 1);
         stopOnDisarm = prefs.getBool("stopDisarm", true);
@@ -68,6 +72,7 @@ struct Settings {
         Preferences prefs;
         prefs.begin("cfg", false);
         prefs.putUChar("camType", (uint8_t)cameraType);
+        prefs.putUChar("uiLang", (uint8_t)language);
         prefs.putUChar("trigMode", (uint8_t)triggerMode);
         prefs.putUChar("trigAux", triggerAuxChannel);
         prefs.putBool("stopDisarm", stopOnDisarm);
