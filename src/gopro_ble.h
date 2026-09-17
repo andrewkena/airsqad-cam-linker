@@ -82,27 +82,30 @@ private:
     void tryConnect() {
         NimBLEScan *pScan = NimBLEDevice::getScan();
         pScan->setActiveScan(true);
-        NimBLEScanResults results = pScan->getResults(SCAN_TIME_MS, false);
+        NimBLEScanResults results = pScan->start(SCAN_TIME_MS, false);
 
-        const NimBLEAdvertisedDevice *target = nullptr;
+        NimBLEAdvertisedDevice target;
+        bool found = false;
         for (int i = 0; i < results.getCount(); i++) {
-            const NimBLEAdvertisedDevice *dev = results.getDevice(i);
-            if (dev->haveName() && dev->getName().rfind(_namePrefix, 0) == 0) {
+            NimBLEAdvertisedDevice dev = results.getDevice(i);
+            if (dev.haveName() && dev.getName().rfind(_namePrefix, 0) == 0) {
                 target = dev;
+                found = true;
                 break;
             }
-            if (dev->isAdvertisingService(NimBLEUUID(SERVICE_UUID))) {
+            if (dev.isAdvertisingService(NimBLEUUID(SERVICE_UUID))) {
                 target = dev;
+                found = true;
                 break;
             }
         }
         pScan->clearResults();
-        if (!target) return;
+        if (!found) return;
 
         if (!_pClient) {
             _pClient = NimBLEDevice::createClient();
         }
-        if (!_pClient->connect(target)) {
+        if (!_pClient->connect(&target)) {
             return;
         }
 
