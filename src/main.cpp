@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "gopro_ble.h"
 #include "msp_osd.h"
+#include "status_portal.h"
 
 // ---------------------------------------------------------------------
 // UART к полётному контроллеру (MSP).
@@ -18,6 +19,7 @@ static constexpr uint32_t OSD_UPDATE_INTERVAL_MS = 500;
 
 HardwareSerial mspSerial(1);
 GoProBle goPro;
+StatusPortal portal;
 
 uint32_t lastOsdUpdate = 0;
 
@@ -47,10 +49,15 @@ void setup() {
     mspSerial.begin(MSP_BAUD, SERIAL_8N1, MSP_RX_PIN, MSP_TX_PIN);
 
     goPro.begin("GoPro"); // подставьте точное имя устройства при необходимости
+
+    // Первые 30 секунд после включения: точка доступа
+    // "AIRSQAD Cam Linker" на 10.0.0.1 со страницей статуса/настроек.
+    portal.begin("AIRSQAD Cam Linker", "12345678");
 }
 
 void loop() {
     goPro.loop();
+    portal.loop(goPro.status);
 
     uint32_t now = millis();
     if (now - lastOsdUpdate > OSD_UPDATE_INTERVAL_MS) {
