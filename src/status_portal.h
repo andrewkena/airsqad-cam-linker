@@ -59,6 +59,8 @@ private:
         _active = false;
     }
 
+    static constexpr const char *FIRMWARE_VERSION = "0.1";
+
     void handleRoot() {
         char batteryStr[8];
         if (_lastStatus.batteryPercent >= 0) {
@@ -67,12 +69,25 @@ private:
             snprintf(batteryStr, sizeof(batteryStr), "-");
         }
 
-        char html[900];
+        char html[2048];
         snprintf(html, sizeof(html),
             "<!DOCTYPE html><html><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-            "<title>GoPro OSD Bridge</title></head><body>"
-            "<h1>GoPro &lt;-&gt; Betaflight OSD Bridge</h1>"
+            "<title>AIR SQAD Cam Linker</title>"
+            "<style>"
+            "body{background:#2b2b2b;color:#e0e0e0;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;"
+            "text-align:center;margin:0;padding:40px 20px;}"
+            "h1{font-size:1.6em;font-weight:600;margin:0 0 16px 0;}"
+            "hr{border:none;border-top:1px solid #555;width:200px;margin:0 auto 16px auto;}"
+            ".version{color:#999;font-size:0.9em;margin-bottom:32px;}"
+            "h2{font-size:1.1em;color:#ccc;margin-top:32px;}"
+            "ul{list-style:none;padding:0;display:inline-block;text-align:left;}"
+            "li{margin:6px 0;}"
+            ".footer{color:#777;font-size:0.8em;margin-top:32px;}"
+            "</style></head><body>"
+            "<h1>AIR SQAD Cam Linker</h1>"
+            "<hr>"
+            "<div class='version'>Version: %s</div>"
             "<h2>Статус</h2>"
             "<ul>"
             "<li>GoPro подключена: %s</li>"
@@ -82,8 +97,9 @@ private:
             "</ul>"
             "<h2>Настройки</h2>"
             "<p>Пока недоступны, появятся в следующих версиях.</p>"
-            "<p><small>Портал отключится через %lu с после включения платы.</small></p>"
+            "<div class='footer'>Портал отключится через %lu с после включения платы.</div>"
             "</body></html>",
+            FIRMWARE_VERSION,
             _lastStatus.connected ? "да" : "нет",
             _lastStatus.recording ? "да" : "нет",
             batteryStr,
