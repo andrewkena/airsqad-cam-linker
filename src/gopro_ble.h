@@ -83,6 +83,23 @@ public:
         _scanningEnabled = true;
     }
 
+    // Разрывает текущее соединение (если было) и форсирует немедленный
+    // повторный поиск камеры в эфире — под кнопку "привязать камеру" на
+    // плате. Чтобы привязать НОВУЮ камеру, а не переподключиться к старой,
+    // старую камеру на время привязки стоит выключить/убрать из радиуса.
+    void startPairing() {
+        if (_pClient && _pClient->isConnected()) {
+            _pClient->disconnect();
+        }
+        status.connected = false;
+        _lastConnectAttempt = 0; // снять троттлинг реконнекта
+        _pairingUntilMs = millis() + PAIRING_WINDOW_MS;
+    }
+
+    bool isPairing() const {
+        return millis() < _pairingUntilMs;
+    }
+
     // Запуск/остановка записи (Open GoPro "Set Shutter", command ID 0x01).
     void setShutter(bool start) {
         if (!_pCommandReq || !status.connected) return;
@@ -121,9 +138,11 @@ private:
     static constexpr uint32_t RECONNECT_INTERVAL_MS = 5000;
     static constexpr uint32_t POLL_INTERVAL_MS = 1000;
     static constexpr uint32_t SCAN_TIME_MS = 4000;
+    static constexpr uint32_t PAIRING_WINDOW_MS = 15000;
 
     std::string _namePrefix;
     bool _scanningEnabled = false;
+    uint32_t _pairingUntilMs = 0;
     NimBLEClient *_pClient = nullptr;
     NimBLERemoteCharacteristic *_pQueryReq = nullptr;
     NimBLERemoteCharacteristic *_pQueryRsp = nullptr;

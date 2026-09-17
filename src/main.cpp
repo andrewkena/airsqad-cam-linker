@@ -20,6 +20,14 @@ static constexpr uint32_t OSD_UPDATE_INTERVAL_MS = 500;
 // PWM-порог, выше которого AUX-канал считается "включён" (режим SWITCH).
 static constexpr uint16_t AUX_SWITCH_THRESHOLD = 1700;
 
+// Встроенная кнопка BOOT на ESP32-C3 SuperMini (активный уровень LOW).
+// Долгое удержание запускает привязку новой камеры. Кнопку можно жать
+// только после того, как плата уже загрузилась — удержание BOOT именно
+// в момент включения/сброса переводит чип в режим прошивки, а не в
+// пользовательский код.
+static constexpr int PAIRING_BUTTON_PIN = 9;
+static constexpr uint32_t PAIRING_HOLD_MS = 2000;
+
 HardwareSerial mspSerial(1);
 GoProBle goPro;
 StatusPortal portal;
@@ -28,13 +36,37 @@ MspFc mspFc;
 
 uint32_t lastOsdUpdate = 0;
 bool recordingActive = false;
+uint32_t buttonPressStartMs = 0;
+bool pairingTriggered = false;
+
+// Долгое удержание кнопки BOOT -> разрыв текущей связи и форсированный
+// поиск новой камеры (см. GoProBle::startPairing()).
+void checkPairingButton() {
+    bool pressed = (digitalRead(PAIRING_BUTTON_PIN) == LOW);
+    if (pressed) {
+        if (buttonPressStartMs == 0) {
+            buttonPressStartMs = millis();
+        } else if (!pairingTriggered && millis() - buttonPressStartMs > PAIRING_HOLD_MS) {
+            pairingTriggered = true;
+            goPro.startPairing();
+            Serial.println("Pairing button held: forcing new camera scan");
+        }
+    } else {
+        buttonPressStartMs = 0;
+        pairingTriggered = false;
+    }
+}
 
 // Формирует текст для конкретного поля данных GoPro (независимо от слота,
 // в который оно в итоге попадёт — привязку поле->слот задают настройки).
 void buildFieldText(OsdField field, char *out, size_t outSize) {
     switch (field) {
         case OsdField::CONNECTION:
-            snprintf(out, outSize, goPro.status.connected ? "GP OK" : "GP ---");
+            if (goPro.isPairing()) {
+                snprintf(out, outSize, "PAIRING");
+            } else {
+                snprintf(out, outSize, goPro.status.connected ? "GP OK" : "GP ---");
+            }
             break;
         case OsdField::RECORDING:
             snprintf(out, outSize, goPro.status.recording ? "REC" : "IDLE");
@@ -119,6 +151,8 @@ void setup() {
     delay(200);
     Serial.println("GoPro <-> Betaflight OSD bridge starting...");
 
+    pinMode(PAIRING_BUTTON_PIN, INPUT_PULLUP);
+
     settings.load();
 
     mspSerial.begin(MSP_BAUD, SERIAL_8N1, MSP_RX_PIN, MSP_TX_PIN);
@@ -142,6 +176,7 @@ void loop() {
     }
     goPro.loop();
     mspFc.loop();
+    checkPairingButton();
 
     uint32_t now = millis();
     if (now - lastOsdUpdate > OSD_UPDATE_INTERVAL_MS) {
