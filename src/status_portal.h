@@ -79,6 +79,7 @@ private:
             _settings->triggerAuxChannel = (uint8_t)aux;
 
             _settings->stopOnDisarm = _server.hasArg("stopOnDisarm");
+            _settings->ledEnabled = _server.hasArg("ledEnabled");
 
             for (uint8_t i = 0; i < Settings::OSD_SLOT_COUNT; i++) {
                 char argName[10];
@@ -201,6 +202,11 @@ private:
             html += "<label>Custom Message " + String(slot + 1) + ":<br>" +
                     osdFieldSelect(slot, current) + "</label>";
         }
+
+        bool ledEnabled = !_settings || _settings->ledEnabled;
+        html += "<h2>Индикация</h2>";
+        html += "<label><input type='checkbox' name='ledEnabled'" + String(ledEnabled ? " checked" : "") +
+                "> Индикация светодиодом включена</label>";
 
         html += "<button type='submit'>Сохранить</button>";
         html += "</form>";

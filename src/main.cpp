@@ -185,17 +185,21 @@ void loop() {
     mspFc.loop();
     checkPairingButton();
 
-    StatusLed::Pattern ledPattern;
-    if (portalActive) {
-        ledPattern = StatusLed::Pattern::WIFI_ACTIVE;
-    } else if (!goPro.status.connected) {
-        ledPattern = StatusLed::Pattern::WAITING_CAMERA;
-    } else if (goPro.status.recording) {
-        ledPattern = StatusLed::Pattern::RECORDING;
+    if (!settings.ledEnabled) {
+        statusLed.off();
     } else {
-        ledPattern = StatusLed::Pattern::CONNECTED;
+        StatusLed::Pattern ledPattern;
+        if (portalActive) {
+            ledPattern = StatusLed::Pattern::WIFI_ACTIVE;
+        } else if (!goPro.status.connected) {
+            ledPattern = StatusLed::Pattern::WAITING_CAMERA;
+        } else if (goPro.status.recording) {
+            ledPattern = StatusLed::Pattern::RECORDING;
+        } else {
+            ledPattern = StatusLed::Pattern::CONNECTED;
+        }
+        statusLed.update(ledPattern);
     }
-    statusLed.update(ledPattern);
 
     uint32_t now = millis();
     if (now - lastOsdUpdate > OSD_UPDATE_INTERVAL_MS) {

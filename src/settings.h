@@ -30,6 +30,7 @@ struct Settings {
     RecTriggerMode triggerMode = RecTriggerMode::AIR;
     uint8_t triggerAuxChannel = 1; // AUX1..AUX8 (1-based), используется только в режиме SWITCH
     bool stopOnDisarm = true;
+    bool ledEnabled = true;
 
     OsdField osdSlotField[OSD_SLOT_COUNT] = {
         OsdField::CONNECTION,
@@ -44,6 +45,7 @@ struct Settings {
         triggerMode = (RecTriggerMode)prefs.getUChar("trigMode", (uint8_t)RecTriggerMode::AIR);
         triggerAuxChannel = prefs.getUChar("trigAux", 1);
         stopOnDisarm = prefs.getBool("stopDisarm", true);
+        ledEnabled = prefs.getBool("ledEnabled", true);
 
         for (uint8_t i = 0; i < OSD_SLOT_COUNT; i++) {
             char key[8];
@@ -59,6 +61,7 @@ struct Settings {
         prefs.putUChar("trigMode", (uint8_t)triggerMode);
         prefs.putUChar("trigAux", triggerAuxChannel);
         prefs.putBool("stopDisarm", stopOnDisarm);
+        prefs.putBool("ledEnabled", ledEnabled);
 
         for (uint8_t i = 0; i < OSD_SLOT_COUNT; i++) {
             char key[8];

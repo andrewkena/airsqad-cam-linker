@@ -29,6 +29,10 @@ public:
         setRaw(false);
     }
 
+    void off() {
+        setRaw(false);
+    }
+
     // Вызывать из loop() как можно чаще — иначе мигание будет дёрганым.
     void update(Pattern pattern) {
         uint32_t now = millis();
