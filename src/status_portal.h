@@ -82,6 +82,10 @@ private:
 
     void handleSaveSettings() {
         if (_settings) {
+            int camType = _server.arg("cameraType").toInt();
+            if (camType < 0 || camType > (int)CameraType::INSTA360) camType = 0;
+            _settings->cameraType = (CameraType)camType;
+
             String mode = _server.arg("mode");
             _settings->triggerMode = (mode == "SWITCH") ? RecTriggerMode::SWITCH : RecTriggerMode::AIR;
 
@@ -192,9 +196,20 @@ private:
         bool isAir = (!_settings || _settings->triggerMode == RecTriggerMode::AIR);
         uint8_t currentAux = _settings ? _settings->triggerAuxChannel : 1;
         bool stopOnDisarm = !_settings || _settings->stopOnDisarm;
+        CameraType currentCamType = _settings ? _settings->cameraType : CameraType::GOPRO;
+
+        html += "<h2>Камера</h2>";
+        html += "<form class='settings' method='POST' action='/save'>";
+        html += "<label>Тип камеры:<br><select name='cameraType'>";
+        html += "<option value='0'" + String(currentCamType == CameraType::GOPRO ? " selected" : "") +
+                ">GoPro</option>";
+        html += "<option value='1'" + String(currentCamType == CameraType::DJI ? " selected" : "") +
+                ">DJI (пока не поддерживается)</option>";
+        html += "<option value='2'" + String(currentCamType == CameraType::INSTA360 ? " selected" : "") +
+                ">Insta360 (пока не поддерживается)</option>";
+        html += "</select></label>";
 
         html += "<h2>Запуск записи</h2>";
-        html += "<form class='settings' method='POST' action='/save'>";
         html += "<label><input type='radio' name='mode' value='AIR'" + String(isAir ? " checked" : "") +
                 "> AIR (запись при arm)</label>";
         html += "<label><input type='radio' name='mode' value='SWITCH'" + String(!isAir ? " checked" : "") +

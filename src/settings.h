@@ -7,6 +7,13 @@
 
 enum class RecTriggerMode : uint8_t { AIR = 0, SWITCH = 1 };
 
+// Тип камеры. На данный момент реально реализован только GOPRO (Open GoPro
+// BLE spec) — DJI и INSTA360 добавлены в интерфейс настроек как задел на
+// будущее: их BLE-протоколы сложнее (нет открытой спецификации у DJI;
+// у Insta360 — заголовок 16 байт + protobuf с фрагментацией вместо
+// простого TLV у GoPro) и пока не реализованы.
+enum class CameraType : uint8_t { GOPRO = 0, DJI = 1, INSTA360 = 2 };
+
 // Что выводить в конкретном слоте OSD_CUSTOM_MSG (1..4).
 enum class OsdField : uint8_t {
     NONE = 0,
@@ -27,6 +34,7 @@ constexpr uint8_t OSD_FIELD_MAX = (uint8_t)OsdField::BATTERY_BARS;
 struct Settings {
     static constexpr uint8_t OSD_SLOT_COUNT = 4;
 
+    CameraType cameraType = CameraType::GOPRO;
     RecTriggerMode triggerMode = RecTriggerMode::AIR;
     uint8_t triggerAuxChannel = 1; // AUX1..AUX8 (1-based), используется только в режиме SWITCH
     bool stopOnDisarm = true;
@@ -42,6 +50,7 @@ struct Settings {
     void load() {
         Preferences prefs;
         prefs.begin("cfg", true);
+        cameraType = (CameraType)prefs.getUChar("camType", (uint8_t)CameraType::GOPRO);
         triggerMode = (RecTriggerMode)prefs.getUChar("trigMode", (uint8_t)RecTriggerMode::AIR);
         triggerAuxChannel = prefs.getUChar("trigAux", 1);
         stopOnDisarm = prefs.getBool("stopDisarm", true);
@@ -58,6 +67,7 @@ struct Settings {
     void save() const {
         Preferences prefs;
         prefs.begin("cfg", false);
+        prefs.putUChar("camType", (uint8_t)cameraType);
         prefs.putUChar("trigMode", (uint8_t)triggerMode);
         prefs.putUChar("trigAux", triggerAuxChannel);
         prefs.putBool("stopDisarm", stopOnDisarm);

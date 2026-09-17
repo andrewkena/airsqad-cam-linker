@@ -178,7 +178,9 @@ void setup() {
 
 void loop() {
     bool portalActive = portal.loop(goPro.status);
-    if (!portalActive) {
+    // DJI/Insta360 в настройках выбрать можно, но клиент под них ещё не
+    // реализован — BLE-подключение к камере пока работает только для GoPro.
+    if (!portalActive && settings.cameraType == CameraType::GOPRO) {
         goPro.enableScanning();
     }
     goPro.loop();
