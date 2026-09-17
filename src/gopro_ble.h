@@ -1,5 +1,6 @@
 #pragma once
 #include <NimBLEDevice.h>
+#include "bonded_cameras.h"
 
 // ---------------------------------------------------------------------
 // Клиент к GoPro по Open GoPro BLE spec (сервис FEA6).
@@ -13,6 +14,8 @@
 //   Status ID  2 = Internal Battery Level (0..100 либо 0..3 в зависимости
 //                  от модели — на GoPro 11 это проценты 0..100)
 //   Status ID 33 = SD Card Status
+//
+// Старт/стоп записи — команда Set Shutter (ID 0x01) через Command Req.
 // ---------------------------------------------------------------------
 
 class GoProBle {
@@ -27,14 +30,21 @@ public:
 
     Status status;
 
-    static constexpr const char *SERVICE_UUID    = "0000fea6-0000-1000-8000-00805f9b34fb";
-    static constexpr const char *QUERY_REQ_UUID  = "b5f90076-aa8d-11e3-9046-0002a5d5c51b";
-    static constexpr const char *QUERY_RSP_UUID  = "b5f90077-aa8d-11e3-9046-0002a5d5c51b";
+    static constexpr const char *SERVICE_UUID     = "0000fea6-0000-1000-8000-00805f9b34fb";
+    static constexpr const char *COMMAND_REQ_UUID = "b5f90072-aa8d-11e3-9046-0002a5d5c51b";
+    static constexpr const char *COMMAND_RSP_UUID = "b5f90073-aa8d-11e3-9046-0002a5d5c51b";
+    static constexpr const char *QUERY_REQ_UUID   = "b5f90076-aa8d-11e3-9046-0002a5d5c51b";
+    static constexpr const char *QUERY_RSP_UUID   = "b5f90077-aa8d-11e3-9046-0002a5d5c51b";
 
     static constexpr uint8_t STATUS_ENCODING_ACTIVE = 10;
     static constexpr uint8_t STATUS_BATTERY_PERCENT = 2;
     static constexpr uint8_t STATUS_SD_STATUS       = 33;
 
+    // Инициализирует BLE-стек (нужно для сканирования и для чтения списка
+    // привязанных устройств в веб-портале). Само сканирование/подключение
+    // остаётся выключенным, пока не позвать enableScanning() — это позволяет
+    // держать портал настроек рабочим, не грузя радиомодуль ESP32-C3
+    // активным сканированием (иначе Wi-Fi точка доступа перестаёт отвечать).
     void begin(const std::string &wantedNamePrefix = "GoPro") {
         _namePrefix = wantedNamePrefix;
         NimBLEDevice::init("ESP32-OSD-Bridge");
@@ -42,10 +52,23 @@ public:
         NimBLEDevice::setSecurityAuth(true, true, true);
     }
 
+    void enableScanning() {
+        _scanningEnabled = true;
+    }
+
+    // Запуск/остановка записи (Open GoPro "Set Shutter", command ID 0x01).
+    void setShutter(bool start) {
+        if (!_pCommandReq || !status.connected) return;
+        uint8_t pkt[4] = {0x03, 0x01, 0x01, (uint8_t)(start ? 0x01 : 0x00)};
+        _pCommandReq->writeValue(pkt, sizeof(pkt), true);
+    }
+
     // Вызывать часто (из loop() или отдельной FreeRTOS-задачи).
     // Сам разруливает: не подключены -> ищем и коннектимся;
     // подключены -> раз в интервал шлём GetStatusValue.
     void loop() {
+        if (!_scanningEnabled) return;
+
         uint32_t now = millis();
 
         if (!status.connected) {
@@ -73,9 +96,12 @@ private:
     static constexpr uint32_t SCAN_TIME_MS = 4000;
 
     std::string _namePrefix;
+    bool _scanningEnabled = false;
     NimBLEClient *_pClient = nullptr;
     NimBLERemoteCharacteristic *_pQueryReq = nullptr;
     NimBLERemoteCharacteristic *_pQueryRsp = nullptr;
+    NimBLERemoteCharacteristic *_pCommandReq = nullptr;
+    NimBLERemoteCharacteristic *_pCommandRsp = nullptr;
     uint32_t _lastConnectAttempt = 0;
     uint32_t _lastPoll = 0;
 
@@ -116,7 +142,9 @@ private:
         }
         _pQueryReq = pSvc->getCharacteristic(QUERY_REQ_UUID);
         _pQueryRsp = pSvc->getCharacteristic(QUERY_RSP_UUID);
-        if (!_pQueryReq || !_pQueryRsp) {
+        _pCommandReq = pSvc->getCharacteristic(COMMAND_REQ_UUID);
+        _pCommandRsp = pSvc->getCharacteristic(COMMAND_RSP_UUID);
+        if (!_pQueryReq || !_pQueryRsp || !_pCommandReq || !_pCommandRsp) {
             _pClient->disconnect();
             return;
         }
@@ -127,6 +155,7 @@ private:
             });
 
         status.connected = true;
+        BondedCameras::remember(target.getAddress().toString(), target.getName());
     }
 
     void requestStatus() {
