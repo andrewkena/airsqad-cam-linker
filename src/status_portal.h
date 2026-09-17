@@ -79,10 +79,40 @@ private:
             _settings->triggerAuxChannel = (uint8_t)aux;
 
             _settings->stopOnDisarm = _server.hasArg("stopOnDisarm");
+
+            for (uint8_t i = 0; i < Settings::OSD_SLOT_COUNT; i++) {
+                char argName[10];
+                snprintf(argName, sizeof(argName), "osdField%u", i);
+                int field = _server.arg(argName).toInt();
+                if (field < 0 || field > (int)OsdField::SD_STATUS) field = 0;
+                _settings->osdSlotField[i] = (OsdField)field;
+            }
+
             _settings->save();
         }
         _server.sendHeader("Location", "/");
         _server.send(303);
+    }
+
+    static const char *fieldLabel(OsdField field) {
+        switch (field) {
+            case OsdField::CONNECTION: return "Статус подключения";
+            case OsdField::RECORDING:  return "Идёт запись";
+            case OsdField::BATTERY:    return "Заряд батареи";
+            case OsdField::SD_STATUS:  return "Статус SD-карты";
+            case OsdField::NONE:
+            default:                   return "Не используется";
+        }
+    }
+
+    String osdFieldSelect(uint8_t slotIndex, OsdField current) const {
+        String out = "<select name='osdField" + String(slotIndex) + "'>";
+        for (uint8_t f = (uint8_t)OsdField::NONE; f <= (uint8_t)OsdField::SD_STATUS; f++) {
+            out += "<option value='" + String(f) + "'" + (f == (uint8_t)current ? " selected" : "") +
+                   ">" + fieldLabel((OsdField)f) + "</option>";
+        }
+        out += "</select>";
+        return out;
     }
 
     void handleForgetCamera() {
@@ -96,7 +126,7 @@ private:
 
     void handleRoot() {
         String html;
-        html.reserve(4096);
+        html.reserve(6144);
 
         html += "<!DOCTYPE html><html><head><meta charset='utf-8'>"
                 "<meta name='viewport' content='width=device-width, initial-scale=1'>"
@@ -157,6 +187,14 @@ private:
         html += "</select></label>";
         html += "<label><input type='checkbox' name='stopOnDisarm'" + String(stopOnDisarm ? " checked" : "") +
                 "> Stop Video on Disarm</label>";
+
+        html += "<h2>Поля OSD (Custom Message 1-4)</h2>";
+        for (uint8_t slot = 0; slot < Settings::OSD_SLOT_COUNT; slot++) {
+            OsdField current = _settings ? _settings->osdSlotField[slot] : OsdField::NONE;
+            html += "<label>Custom Message " + String(slot + 1) + ":<br>" +
+                    osdFieldSelect(slot, current) + "</label>";
+        }
+
         html += "<button type='submit'>Сохранить</button>";
         html += "</form>";
 
@@ -174,8 +212,6 @@ private:
             }
         }
 
-        html += "<h2>Настройки</h2>";
-        html += "<p>Остальные настройки появятся в следующих версиях.</p>";
         html += "<div class='footer'>Портал отключится через " + String(AP_DURATION_MS / 1000) +
                 " с после включения платы.</div>";
         html += "</body></html>";

@@ -15,8 +15,6 @@ static constexpr int MSP_RX_PIN = 4;
 static constexpr int MSP_TX_PIN = 5;
 static constexpr uint32_t MSP_BAUD = 115200;
 
-// Индекс OSD_CUSTOM_MSG-слота (0 -> OSD_CUSTOM_MSG1)
-static constexpr uint8_t OSD_SLOT = 0;
 static constexpr uint32_t OSD_UPDATE_INTERVAL_MS = 500;
 
 // PWM-порог, выше которого AUX-канал считается "включён" (режим SWITCH).
@@ -31,22 +29,44 @@ MspFc mspFc;
 uint32_t lastOsdUpdate = 0;
 bool recordingActive = false;
 
-void updateOsd() {
-    char text[mspOsd::CUSTOM_MSG_MAX_LEN + 1];
-
-    if (!goPro.status.connected) {
-        snprintf(text, sizeof(text), "GP ---");
-    } else if (goPro.status.recording) {
-        if (goPro.status.batteryPercent >= 0) {
-            snprintf(text, sizeof(text), "REC BAT%d%%", goPro.status.batteryPercent);
-        } else {
-            snprintf(text, sizeof(text), "REC");
-        }
-    } else {
-        snprintf(text, sizeof(text), "GP IDLE");
+// Формирует текст для конкретного поля данных GoPro (независимо от слота,
+// в который оно в итоге попадёт — привязку поле->слот задают настройки).
+void buildFieldText(OsdField field, char *out, size_t outSize) {
+    switch (field) {
+        case OsdField::CONNECTION:
+            snprintf(out, outSize, goPro.status.connected ? "GP OK" : "GP ---");
+            break;
+        case OsdField::RECORDING:
+            snprintf(out, outSize, goPro.status.recording ? "REC" : "IDLE");
+            break;
+        case OsdField::BATTERY:
+            if (goPro.status.batteryPercent >= 0) {
+                snprintf(out, outSize, "BAT %d%%", goPro.status.batteryPercent);
+            } else {
+                snprintf(out, outSize, "BAT --");
+            }
+            break;
+        case OsdField::SD_STATUS:
+            // Значение сырое (код Open GoPro status ID 33), точная расшифровка
+            // кодов пока не подтверждена — при необходимости уточнить и заменить
+            // на текстовые статусы (OK/FULL/ERROR и т.д.).
+            snprintf(out, outSize, "SD %u", goPro.status.sdStatus);
+            break;
+        case OsdField::NONE:
+        default:
+            out[0] = '\0';
+            break;
     }
+}
 
-    mspOsd::setCustomMessage(mspSerial, OSD_SLOT, text);
+void updateOsd() {
+    for (uint8_t slot = 0; slot < Settings::OSD_SLOT_COUNT; slot++) {
+        char text[mspOsd::CUSTOM_MSG_MAX_LEN + 1];
+        buildFieldText(settings.osdSlotField[slot], text, sizeof(text));
+        if (text[0] != '\0') {
+            mspOsd::setCustomMessage(mspSerial, slot, text);
+        }
+    }
 }
 
 // Решает, нужно ли сейчас писать видео, исходя из настроек триггера,
