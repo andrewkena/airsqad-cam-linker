@@ -25,7 +25,7 @@ public:
     static void remember(const std::string &address, const std::string &name) {
         Preferences prefs;
         prefs.begin("bonds", false);
-        prefs.putString(address.c_str(), name.c_str());
+        prefs.putString(nvsKey(address).c_str(), name.c_str());
         prefs.end();
     }
 
@@ -38,7 +38,7 @@ public:
 
         for (int i = 0; i < count; i++) {
             std::string addrStr = NimBLEDevice::getBondedAddress(i).toString();
-            String cachedName = prefs.getString(addrStr.c_str(), "");
+            String cachedName = prefs.getString(nvsKey(addrStr).c_str(), "");
             BondedCamera cam;
             cam.address = addrStr;
             cam.name = cachedName.length() ? std::string(cachedName.c_str()) : addrStr;
@@ -62,7 +62,19 @@ public:
 
         Preferences prefs;
         prefs.begin("bonds", false);
-        prefs.remove(address.c_str());
+        prefs.remove(nvsKey(address).c_str());
         prefs.end();
+    }
+
+private:
+    // Ключи NVS ограничены 15 символами, а MAC-адрес с двоеточиями ("aa:bb:cc:dd:ee:ff")
+    // занимает 17 — убираем двоеточия, чтобы уложиться в лимит (12 символов).
+    static std::string nvsKey(const std::string &address) {
+        std::string key;
+        key.reserve(12);
+        for (char c : address) {
+            if (c != ':') key += c;
+        }
+        return key;
     }
 };

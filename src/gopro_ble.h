@@ -158,7 +158,9 @@ private:
     void tryConnect() {
         NimBLEScan *pScan = NimBLEDevice::getScan();
         pScan->setActiveScan(true);
-        NimBLEScanResults results = pScan->start(SCAN_TIME_MS, false);
+        // NimBLEScan::start() принимает длительность в СЕКУНДАХ, а не в мс —
+        // без деления SCAN_TIME_MS(=4000) уходил в скан на 4000 секунд.
+        NimBLEScanResults results = pScan->start(SCAN_TIME_MS / 1000, false);
 
         NimBLEAdvertisedDevice target;
         bool found = false;
@@ -185,6 +187,12 @@ private:
             return;
         }
 
+        // GoPro требует зашифрованное соединение для ответов на защищённые
+        // характеристики (Query/Command Rsp) — сама команда записывается
+        // без ошибок и на незашифрованном линке, но камера молча не шлёт
+        // ответ, пока связь не будет явно поднята до encrypted/authenticated.
+        _pClient->secureConnection();
+
         NimBLERemoteService *pSvc = _pClient->getService(SERVICE_UUID);
         if (!pSvc) {
             _pClient->disconnect();
@@ -199,10 +207,22 @@ private:
             return;
         }
 
-        _pQueryRsp->subscribe(true,
-            [this](NimBLERemoteCharacteristic *c, uint8_t *data, size_t len, bool isNotify) {
-                this->onQueryResponse(data, len);
-            });
+        // GoPro (см. официальный demo connect_ble()) ожидает подписку на ВСЕ
+        // notify-характеристики сразу после подключения, а не только на ту,
+        // чей ответ нам сейчас нужен — иначе камера просто не начинает
+        // присылать ответы на запросы (Query Rsp молчит, хотя запись в
+        // Query Req проходит без ошибок).
+        NimBLEUUID queryRspUuid(QUERY_RSP_UUID);
+        for (NimBLERemoteService *svc : *_pClient->getServices(false)) {
+            for (NimBLERemoteCharacteristic *ch : *svc->getCharacteristics(false)) {
+                if (!ch->canNotify() && !ch->canIndicate()) continue;
+                bool isQueryRsp = ch->getUUID().equals(queryRspUuid);
+                ch->subscribe(true,
+                    [this, isQueryRsp](NimBLERemoteCharacteristic *c, uint8_t *data, size_t len, bool isNotify) {
+                        if (isQueryRsp) this->onQueryResponse(data, len);
+                    });
+            }
+        }
 
         status.connected = true;
         BondedCameras::remember(target.getAddress().toString(), target.getName());
@@ -273,10 +293,10 @@ private:
         }
     }
 
-    // Собранный payload: [query_id_echo][id][val_len][val...][id][val_len][val...]...
+    // Собранный payload: [query_id_echo][result_code][id][val_len][val...][id][val_len][val...]...
     void parseQueryPayload(const uint8_t *data, size_t len) {
-        if (len < 1) return;
-        size_t pos = 1; // пропускаем query_id_echo
+        if (len < 2) return;
+        size_t pos = 2; // пропускаем query_id_echo и байт кода результата
         while (pos + 2 <= len) {
             uint8_t id = data[pos];
             uint8_t vlen = data[pos + 1];

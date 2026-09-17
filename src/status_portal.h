@@ -77,9 +77,14 @@ private:
     void stop() {
         _dnsServer.stop();
         _server.stop();
-        WiFi.softAPdisconnect(true);
-        WiFi.mode(WIFI_OFF);
+        // Любая попытка остановить/выключить Wi-Fi (softAPdisconnect,
+        // WiFi.mode(WIFI_OFF)) виснет на ESP32-C3, если BLE-стек уже
+        // активен — общий радиомодуль, конфликт при переключении режима
+        // из-под NimBLE. Поэтому просто останавливаем веб-сервер и DNS,
+        // саму точку доступа оставляем висеть в фоне (ESP32-C3 умеет
+        // работать с Wi-Fi и BLE одновременно).
         _active = false;
+        Serial.println("Portal stopped, BLE scanning will start now");
     }
 
     void handleSaveSettings() {
@@ -87,6 +92,7 @@ private:
             int camType = _server.arg("cameraType").toInt();
             if (camType < 0 || camType > (int)CameraType::INSTA360) camType = 0;
             _settings->cameraType = (CameraType)camType;
+            _settings->autoPowerOnCamera = _server.hasArg("autoPowerOnCamera");
 
             _settings->language = (_server.arg("uiLang") == "ru") ? UiLanguage::RU : UiLanguage::EN;
 
@@ -258,6 +264,7 @@ private:
         uint8_t currentAux = _settings ? _settings->triggerAuxChannel : 1;
         bool stopOnDisarm = !_settings || _settings->stopOnDisarm;
         CameraType currentCamType = _settings ? _settings->cameraType : CameraType::GOPRO;
+        bool autoPowerOn = !_settings || _settings->autoPowerOnCamera;
 
         html += "<form class='settings' method='POST' action='/save'>";
 
@@ -270,6 +277,8 @@ private:
         html += "<input type='radio' id='camInsta' name='cameraType' value='2' disabled>"
                 "<label for='camInsta'>Insta360</label>";
         html += "</div>";
+        html += "<label><input type='checkbox' name='autoPowerOnCamera'" + String(autoPowerOn ? " checked" : "") +
+                "> " + T("Auto power-on camera on boot", "Автовключение камеры при старте") + "</label>";
 
         html += "<h2>" + T("Recording trigger", "Запуск записи") + "</h2>";
         html += "<div class='mode-toggle'>";

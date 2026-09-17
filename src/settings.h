@@ -42,6 +42,11 @@ struct Settings {
     uint8_t triggerAuxChannel = 1; // AUX1..AUX8 (1-based), используется только в режиме SWITCH
     bool stopOnDisarm = true;
     bool ledEnabled = true;
+    // Если выключено — плата не ищет и не подключается к камере сама при
+    // включении (подключение по BLE будит GoPro из спящего режима, а это
+    // не всегда желаемое поведение). Включить связь всё ещё можно вручную
+    // кнопкой BOOT (см. checkPairingButton() в main.cpp).
+    bool autoPowerOnCamera = true;
 
     OsdField osdSlotField[OSD_SLOT_COUNT] = {
         OsdField::CONNECTION,
@@ -59,6 +64,7 @@ struct Settings {
         triggerAuxChannel = prefs.getUChar("trigAux", 1);
         stopOnDisarm = prefs.getBool("stopDisarm", true);
         ledEnabled = prefs.getBool("ledEnabled", true);
+        autoPowerOnCamera = prefs.getBool("autoPowerOn", true);
 
         for (uint8_t i = 0; i < OSD_SLOT_COUNT; i++) {
             char key[8];
@@ -77,6 +83,7 @@ struct Settings {
         prefs.putUChar("trigAux", triggerAuxChannel);
         prefs.putBool("stopDisarm", stopOnDisarm);
         prefs.putBool("ledEnabled", ledEnabled);
+        prefs.putBool("autoPowerOn", autoPowerOnCamera);
 
         for (uint8_t i = 0; i < OSD_SLOT_COUNT; i++) {
             char key[8];
