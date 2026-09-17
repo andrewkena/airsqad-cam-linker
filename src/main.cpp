@@ -186,14 +186,14 @@ void loop() {
     checkPairingButton();
 
     StatusLed::Pattern ledPattern;
-    if (goPro.isPairing()) {
-        ledPattern = StatusLed::Pattern::BLINK_SLOW;
+    if (portalActive) {
+        ledPattern = StatusLed::Pattern::WIFI_ACTIVE;
     } else if (!goPro.status.connected) {
-        ledPattern = StatusLed::Pattern::OFF;
+        ledPattern = StatusLed::Pattern::WAITING_CAMERA;
     } else if (goPro.status.recording) {
-        ledPattern = StatusLed::Pattern::BLINK_FAST;
+        ledPattern = StatusLed::Pattern::RECORDING;
     } else {
-        ledPattern = StatusLed::Pattern::SOLID;
+        ledPattern = StatusLed::Pattern::CONNECTED;
     }
     statusLed.update(ledPattern);
 
