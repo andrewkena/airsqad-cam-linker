@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
+#include <WiFi.h>
 
 // ---------------------------------------------------------------------
 // Временный диагностический инструмент (env "ble-scan" в platformio.ini,
@@ -101,6 +102,23 @@ void buildHeader16(uint8_t *out, uint16_t payloadLen, uint16_t commandCode, uint
 
 static constexpr uint16_t CMD_GET_CAPTURE_STATUS = 0x0F;
 static constexpr uint16_t CMD_CHECK_AUTHORIZATION = 0x27;
+static constexpr uint16_t CMD_OPEN_CAMERA_WIFI = 0x21;
+
+void scanWifiOnce() {
+    Serial.println(">>> Scanning WiFi for camera AP...");
+    WiFi.mode(WIFI_STA);
+    int n = WiFi.scanNetworks();
+    Serial.print(">>> WiFi scan found ");
+    Serial.print(n);
+    Serial.println(" network(s):");
+    for (int i = 0; i < n; i++) {
+        Serial.print("    SSID: '");
+        Serial.print(WiFi.SSID(i));
+        Serial.print("'  RSSI=");
+        Serial.println(WiFi.RSSI(i));
+    }
+    WiFi.scanDelete();
+}
 
 void dumpGatt(NimBLEAdvertisedDevice dev) {
     Serial.print(">>> Connecting to ");
@@ -175,6 +193,16 @@ void dumpGatt(NimBLEAdvertisedDevice dev) {
 
         Serial.println(">>> Waiting 3s for notifications...");
         delay(3000);
+
+        uint8_t pkt3[16];
+        buildHeader16(pkt3, 0, CMD_OPEN_CAMERA_WIFI, 3);
+        printHex(">>> Sending OPEN_CAMERA_WIFI", pkt3, sizeof(pkt3));
+        bool writeOk3 = pBe81->writeValue(pkt3, sizeof(pkt3), true);
+        Serial.print(">>> writeValue() returned: ");
+        Serial.println(writeOk3 ? "true" : "false");
+
+        Serial.println(">>> Waiting 5s for camera to (maybe) start its WiFi AP...");
+        delay(5000);
     } else {
         Serial.println(">>> BE81/BE82 not found, skipping command test.");
     }
@@ -182,6 +210,8 @@ void dumpGatt(NimBLEAdvertisedDevice dev) {
     pClient->disconnect();
     NimBLEDevice::deleteClient(pClient);
     Serial.println(">>> Done, disconnected.");
+
+    scanWifiOnce();
 }
 
 void setup() {
