@@ -87,13 +87,13 @@ void buildFieldText(OsdField field, char *out, size_t outSize) {
         case OsdField::SD_STATUS:
             // Коды по официальному enum PrimaryStorage (Open GoPro Status ID 33).
             switch (goPro.status.sdStatus) {
-                case 0: snprintf(out, outSize, "SD OK"); break;
-                case 1: snprintf(out, outSize, "SD FULL"); break;
-                case 2: snprintf(out, outSize, "SD REM"); break;
-                case 3: snprintf(out, outSize, "SD FMT ERR"); break;
-                case 4: snprintf(out, outSize, "SD BUSY"); break;
-                case 8: snprintf(out, outSize, "SD SWAP"); break;
-                default: snprintf(out, outSize, "SD ?%u", goPro.status.sdStatus); break;
+                case 0: snprintf(out, outSize, "OK"); break;
+                case 1: snprintf(out, outSize, "FULL"); break;
+                case 2: snprintf(out, outSize, "REM"); break;
+                case 3: snprintf(out, outSize, "FMT ERR"); break;
+                case 4: snprintf(out, outSize, "BUSY"); break;
+                case 8: snprintf(out, outSize, "SWAP"); break;
+                default: snprintf(out, outSize, "?%u", goPro.status.sdStatus); break;
             }
             break;
         case OsdField::OVERHEATING:
