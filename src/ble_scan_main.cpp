@@ -136,16 +136,31 @@ void dumpGatt(NimBLEAdvertisedDevice dev) {
     }
 
     if (pBe81 && pBe82) {
+        if (pBe81->canRead()) {
+            NimBLEAttValue val = pBe81->readValue();
+            printHex(">>> READ BE81", val.data(), val.size());
+        }
+        NimBLERemoteService *svc = pBe81->getRemoteService();
+        NimBLERemoteCharacteristic *pBe83 = svc ? svc->getCharacteristic(NimBLEUUID((uint16_t)0xBE83)) : nullptr;
+        if (pBe83 && pBe83->canRead()) {
+            NimBLEAttValue val = pBe83->readValue();
+            printHex(">>> READ BE83", val.data(), val.size());
+        }
+
         Serial.println(">>> Subscribing to BE82 notify...");
-        pBe82->subscribe(true, [](NimBLERemoteCharacteristic *c, uint8_t *data, size_t len, bool isNotify) {
+        bool subOk = pBe82->subscribe(true, [](NimBLERemoteCharacteristic *c, uint8_t *data, size_t len, bool isNotify) {
             printHex(">>> NOTIFY", data, len);
         });
+        Serial.print(">>> subscribe() returned: ");
+        Serial.println(subOk ? "true" : "false");
         delay(500);
 
         uint8_t pkt[16];
         buildHeader16(pkt, 0, CMD_GET_CAPTURE_STATUS, 1);
         printHex(">>> Sending GET_CAPTURE_STATUS", pkt, sizeof(pkt));
-        pBe81->writeValue(pkt, sizeof(pkt), true);
+        bool writeOk = pBe81->writeValue(pkt, sizeof(pkt), true);
+        Serial.print(">>> writeValue() returned: ");
+        Serial.println(writeOk ? "true" : "false");
 
         Serial.println(">>> Waiting 3s for notifications...");
         delay(3000);
