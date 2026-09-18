@@ -65,6 +65,42 @@ void printCharProps(NimBLERemoteCharacteristic *c) {
     Serial.println();
 }
 
+void printHex(const char *label, const uint8_t *data, size_t len) {
+    Serial.print(label);
+    Serial.print(" (");
+    Serial.print(len);
+    Serial.print(" bytes): ");
+    for (size_t i = 0; i < len; i++) {
+        char buf[4];
+        snprintf(buf, sizeof(buf), "%02X ", data[i]);
+        Serial.print(buf);
+    }
+    Serial.println();
+}
+
+// Header16 (Insta360 "Direct Control" / BE80): 16-байтный заголовок,
+// протобуф-payload опционален. См. doc/protocol.md в xaionaro-go/insta360ctl.
+void buildHeader16(uint8_t *out, uint16_t payloadLen, uint16_t commandCode, uint8_t seq) {
+    out[0] = payloadLen & 0xFF;
+    out[1] = (payloadLen >> 8) & 0xFF;
+    out[2] = 0x00;
+    out[3] = 0x00;
+    out[4] = 0x04; // Mode = Message
+    out[5] = 0x00;
+    out[6] = 0x00;
+    out[7] = commandCode & 0xFF;
+    out[8] = (commandCode >> 8) & 0xFF;
+    out[9] = 0x02; // Content type = protobuf
+    out[10] = seq;
+    out[11] = 0x00;
+    out[12] = 0x00;
+    out[13] = 0x80; // flags: bit7 = last fragment
+    out[14] = 0x00;
+    out[15] = 0x00;
+}
+
+static constexpr uint16_t CMD_GET_CAPTURE_STATUS = 0x0F;
+
 void dumpGatt(NimBLEAdvertisedDevice dev) {
     Serial.print(">>> Connecting to ");
     Serial.print(dev.getAddress().toString().c_str());
@@ -81,6 +117,9 @@ void dumpGatt(NimBLEAdvertisedDevice dev) {
     Serial.print(">>> Connected. Services found: ");
     Serial.println(services->size());
 
+    NimBLERemoteCharacteristic *pBe81 = nullptr;
+    NimBLERemoteCharacteristic *pBe82 = nullptr;
+
     for (NimBLERemoteService *svc : *services) {
         Serial.print("  SERVICE ");
         Serial.println(svc->getUUID().toString().c_str());
@@ -90,7 +129,28 @@ void dumpGatt(NimBLEAdvertisedDevice dev) {
             Serial.print("    CHAR ");
             Serial.println(ch->getUUID().toString().c_str());
             printCharProps(ch);
+
+            if (ch->getUUID().equals(NimBLEUUID((uint16_t)0xBE81))) pBe81 = ch;
+            if (ch->getUUID().equals(NimBLEUUID((uint16_t)0xBE82))) pBe82 = ch;
         }
+    }
+
+    if (pBe81 && pBe82) {
+        Serial.println(">>> Subscribing to BE82 notify...");
+        pBe82->subscribe(true, [](NimBLERemoteCharacteristic *c, uint8_t *data, size_t len, bool isNotify) {
+            printHex(">>> NOTIFY", data, len);
+        });
+        delay(500);
+
+        uint8_t pkt[16];
+        buildHeader16(pkt, 0, CMD_GET_CAPTURE_STATUS, 1);
+        printHex(">>> Sending GET_CAPTURE_STATUS", pkt, sizeof(pkt));
+        pBe81->writeValue(pkt, sizeof(pkt), true);
+
+        Serial.println(">>> Waiting 3s for notifications...");
+        delay(3000);
+    } else {
+        Serial.println(">>> BE81/BE82 not found, skipping command test.");
     }
 
     pClient->disconnect();
