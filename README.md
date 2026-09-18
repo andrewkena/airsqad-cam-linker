@@ -162,7 +162,7 @@ pio device monitor --port COMx --baud 115200  ; отладочный вывод
 | Статус подключения | `GP OK` / `GP ---` / `PAIRING` | состояние BLE-связи |
 | Идёт запись | `REC` / `IDLE` | ID 10 (Encoding Active) |
 | Заряд батареи, % | `BAT 87%` | ID 70 (Internal Battery Percentage) |
-| Статус SD-карты | `OK` / `FULL` / `REM` / `FMT ERR` / `BUSY` / `SWAP` | ID 33 (Primary Storage) |
+| Статус SD-карты | `SD OK` / `SD FULL` / `SD REM` / `SD FMT ERR` / `SD BUSY` / `SD SWAP` | ID 33 (Primary Storage) |
 | Перегрев | `HOT` / `TEMP OK` | ID 6 (Overheating) |
 | Осталось времени записи | `TIME 12:34` | ID 35 (Remaining Video Time) |
 | Свободно на SD | `FREE 1024MB` | ID 54 (SD Card Remaining) |
@@ -175,12 +175,12 @@ pio device monitor --port COMx --baud 115200  ; отладочный вывод
 
 | Код | Значение | Текст на OSD |
 |---|---|---|
-| 0 | OK | `OK` |
-| 1 | SD Card Full | `FULL` |
-| 2 | SD Card Removed | `REM` |
-| 3 | SD Card Format Error | `FMT ERR` |
-| 4 | SD Card Busy | `BUSY` |
-| 8 | SD Card Swapped | `SWAP` |
+| 0 | OK | `SD OK` |
+| 1 | SD Card Full | `SD FULL` |
+| 2 | SD Card Removed | `SD REM` |
+| 3 | SD Card Format Error | `SD FMT ERR` |
+| 4 | SD Card Busy | `SD BUSY` |
+| 8 | SD Card Swapped | `SD SWAP` |
 
 Код ошибок SD-карты (ID 112) пока выводится сырым числом (`SD ERR N`) — расшифровка не найдена.
 
