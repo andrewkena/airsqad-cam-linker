@@ -100,6 +100,7 @@ void buildHeader16(uint8_t *out, uint16_t payloadLen, uint16_t commandCode, uint
 }
 
 static constexpr uint16_t CMD_GET_CAPTURE_STATUS = 0x0F;
+static constexpr uint16_t CMD_CHECK_AUTHORIZATION = 0x27;
 
 void dumpGatt(NimBLEAdvertisedDevice dev) {
     Serial.print(">>> Connecting to ");
@@ -161,6 +162,16 @@ void dumpGatt(NimBLEAdvertisedDevice dev) {
         bool writeOk = pBe81->writeValue(pkt, sizeof(pkt), true);
         Serial.print(">>> writeValue() returned: ");
         Serial.println(writeOk ? "true" : "false");
+
+        Serial.println(">>> Waiting 3s for notifications...");
+        delay(3000);
+
+        uint8_t pkt2[16];
+        buildHeader16(pkt2, 0, CMD_CHECK_AUTHORIZATION, 2);
+        printHex(">>> Sending CHECK_AUTHORIZATION", pkt2, sizeof(pkt2));
+        bool writeOk2 = pBe81->writeValue(pkt2, sizeof(pkt2), true);
+        Serial.print(">>> writeValue() returned: ");
+        Serial.println(writeOk2 ? "true" : "false");
 
         Serial.println(">>> Waiting 3s for notifications...");
         delay(3000);
