@@ -50,12 +50,61 @@ void printDevice(NimBLEAdvertisedDevice dev) {
     }
 }
 
+// Префикс имени устройства, к которому нужно подключиться и вывести
+// полную структуру GATT (сервисы + характеристики + свойства).
+// Оставьте пустым (""), чтобы отключить эту часть и только сканировать.
+static const char *CONNECT_TARGET_NAME_PREFIX = "ONE RS";
+
+void printCharProps(NimBLERemoteCharacteristic *c) {
+    Serial.print("        props: ");
+    if (c->canRead()) Serial.print("READ ");
+    if (c->canWrite()) Serial.print("WRITE ");
+    if (c->canWriteNoResponse()) Serial.print("WRITE_NR ");
+    if (c->canNotify()) Serial.print("NOTIFY ");
+    if (c->canIndicate()) Serial.print("INDICATE ");
+    Serial.println();
+}
+
+void dumpGatt(NimBLEAdvertisedDevice dev) {
+    Serial.print(">>> Connecting to ");
+    Serial.print(dev.getAddress().toString().c_str());
+    Serial.println(" to dump full GATT tree...");
+
+    NimBLEClient *pClient = NimBLEDevice::createClient();
+    if (!pClient->connect(&dev)) {
+        Serial.println(">>> Connect FAILED");
+        NimBLEDevice::deleteClient(pClient);
+        return;
+    }
+
+    std::vector<NimBLERemoteService *> *services = pClient->getServices(true);
+    Serial.print(">>> Connected. Services found: ");
+    Serial.println(services->size());
+
+    for (NimBLERemoteService *svc : *services) {
+        Serial.print("  SERVICE ");
+        Serial.println(svc->getUUID().toString().c_str());
+
+        std::vector<NimBLERemoteCharacteristic *> *chars = svc->getCharacteristics(true);
+        for (NimBLERemoteCharacteristic *ch : *chars) {
+            Serial.print("    CHAR ");
+            Serial.println(ch->getUUID().toString().c_str());
+            printCharProps(ch);
+        }
+    }
+
+    pClient->disconnect();
+    NimBLEDevice::deleteClient(pClient);
+    Serial.println(">>> Done, disconnected.");
+}
+
 void setup() {
     Serial.begin(115200);
     delay(300);
     Serial.println("=== BLE scan diagnostic tool ===");
 
     NimBLEDevice::init("BLE-Scanner");
+    NimBLEDevice::setSecurityAuth(true, true, true);
 }
 
 void loop() {
@@ -70,10 +119,25 @@ void loop() {
     Serial.print(results.getCount());
     Serial.println(" device(s):");
 
+    NimBLEAdvertisedDevice target;
+    bool foundTarget = false;
+
     for (int i = 0; i < results.getCount(); i++) {
-        printDevice(results.getDevice(i));
+        NimBLEAdvertisedDevice dev = results.getDevice(i);
+        printDevice(dev);
+
+        if (strlen(CONNECT_TARGET_NAME_PREFIX) > 0 && dev.haveName() &&
+            dev.getName().rfind(CONNECT_TARGET_NAME_PREFIX, 0) == 0) {
+            target = dev;
+            foundTarget = true;
+        }
     }
 
     pScan->clearResults();
+
+    if (foundTarget) {
+        dumpGatt(target);
+    }
+
     delay(1000);
 }
