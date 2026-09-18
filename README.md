@@ -162,7 +162,7 @@ pio device monitor --port COMx --baud 115200  ; отладочный вывод
 | Статус подключения | `GP OK` / `GP ---` / `PAIRING` | состояние BLE-связи |
 | Идёт запись | `REC` / `IDLE` | ID 10 (Encoding Active) |
 | Заряд батареи, % | `BAT 87%` | ID 70 (Internal Battery Percentage) |
-| Статус SD-карты | `SD 0` (код сырой) | ID 33 (Primary Storage) |
+| Статус SD-карты | `SD OK` / `SD FULL` / `SD REM` / `SD FMT ERR` / `SD BUSY` / `SD SWAP` | ID 33 (Primary Storage) |
 | Перегрев | `HOT` / `TEMP OK` | ID 6 (Overheating) |
 | Осталось времени записи | `TIME 12:34` | ID 35 (Remaining Video Time) |
 | Свободно на SD | `FREE 1024MB` | ID 54 (SD Card Remaining) |
@@ -171,7 +171,18 @@ pio device monitor --port COMx --baud 115200  ; отладочный вывод
 | Занята (busy/ready) | `BUSY` / `READY` | ID 8 (Busy) |
 | Заряд батареи, делений | `BAT BARS 3` | ID 2 (Internal Battery Bars) |
 
-Коды статусов SD-карты и ошибок пока выводятся сырыми числами — точная расшифровка в текстовые статусы (OK/FULL/ERROR) не подтверждена и может быть добавлена позже.
+Статус SD-карты (ID 33) расшифрован по официальному enum `PrimaryStorage` из исходников Open GoPro:
+
+| Код | Значение | Текст на OSD |
+|---|---|---|
+| 0 | OK | `SD OK` |
+| 1 | SD Card Full | `SD FULL` |
+| 2 | SD Card Removed | `SD REM` |
+| 3 | SD Card Format Error | `SD FMT ERR` |
+| 4 | SD Card Busy | `SD BUSY` |
+| 8 | SD Card Swapped | `SD SWAP` |
+
+Код ошибок SD-карты (ID 112) пока выводится сырым числом (`SD ERR N`) — расшифровка не найдена.
 
 ## Устранение неполадок
 
