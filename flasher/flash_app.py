@@ -188,6 +188,13 @@ class FlasherApp:
         root.resizable(False, False)
         root.configure(bg=BG)
 
+        try:
+            icon_path = resource_path("assets/icon.ico")
+            if icon_path.exists():
+                root.iconbitmap(default=str(icon_path))
+        except tk.TclError:
+            pass
+
         self._setup_style()
 
         self.log_queue: queue.Queue = queue.Queue()

@@ -7,7 +7,7 @@ cd /d "%~dp0"
 pip install -r requirements.txt
 if errorlevel 1 goto :error
 
-pyinstaller --onefile --windowed --name AirsqadFlasher --add-data "assets;assets" flash_app.py
+pyinstaller --onefile --windowed --name AirsqadFlasher --icon "assets\icon.ico" --add-data "assets;assets" flash_app.py
 if errorlevel 1 goto :error
 
 echo.
