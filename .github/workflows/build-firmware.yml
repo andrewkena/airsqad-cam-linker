@@ -1,0 +1,65 @@
+name: Build firmware
+
+# Собирает прошивку (env esp32-c3-supermini) при каждом пуше в master и
+# публикует бинарники в GitHub Release с тегом "latest" — это единственный
+# источник, из которого Windows-приложение флешер (см. flasher/) скачивает
+# актуальную прошивку.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - run: pip install platformio
+
+      - run: pio run -e esp32-c3-supermini
+
+      - name: Собрать артефакты релиза
+        run: |
+          set -eu
+          mkdir -p release
+          cp .pio/build/esp32-c3-supermini/bootloader.bin release/
+          cp .pio/build/esp32-c3-supermini/partitions.bin release/
+          cp .pio/build/esp32-c3-supermini/firmware.bin release/
+          BOOT_APP0="$(find "$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions" -name boot_app0.bin | head -1)"
+          cp "$BOOT_APP0" release/boot_app0.bin
+
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          cat > release/manifest.json <<EOF
+          {
+            "chip": "esp32c3",
+            "flash_mode": "dio",
+            "flash_freq": "80m",
+            "flash_size": "4MB",
+            "commit": "${GITHUB_SHA}",
+            "commit_short": "${SHORT_SHA}",
+            "built_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "files": [
+              { "offset": "0x0000", "file": "bootloader.bin" },
+              { "offset": "0x8000", "file": "partitions.bin" },
+              { "offset": "0xe000", "file": "boot_app0.bin" },
+              { "offset": "0x10000", "file": "firmware.bin" }
+            ]
+          }
+          EOF
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest build (${{ github.sha }})"
+          body: "Автосборка прошивки AIRSQAD Cam Linker из master (commit ${{ github.sha }})."
+          prerelease: true
+          files: release/*

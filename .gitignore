@@ -4,3 +4,9 @@
 *.o
 *.elf
 *.bin
+
+# flasher (Python app)
+flasher/__pycache__/
+flasher/build/
+flasher/dist/
+flasher/*.spec
