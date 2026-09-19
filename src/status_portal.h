@@ -65,7 +65,7 @@ public:
     }
 
 private:
-    static constexpr const char *FIRMWARE_VERSION = "0.1";
+    static constexpr const char *FIRMWARE_VERSION = "0.2";
 
     WebServer _server{80};
     DNSServer _dnsServer;

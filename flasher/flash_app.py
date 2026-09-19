@@ -29,6 +29,60 @@ GITHUB_REPO = "andrewkena/airsqad-cam-linker"
 RELEASE_TAG = "latest"
 CACHE_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "AirsqadFlasher" / "firmware"
 
+# Версия прошивки, которую собирает текущий master (см. FIRMWARE_VERSION в
+# src/status_portal.h) — только для справки в диалоге "?", сама заливка
+# всегда берёт actuальный build по манифесту из GitHub Release, а не эту строку.
+FIRMWARE_VERSION_HINT = "0.2"
+
+HELP_TEXT = """\
+ЧТО ДЕЛАЕТ ЭТА ПРОГРАММА
+
+Flasher скачивает последнюю собранную прошивку AIRSQAD Cam Linker \
+с GitHub (публикуется автоматически при каждом обновлении проекта) \
+и заливает её на плату ESP32-C3 через USB. Ничего устанавливать \
+дополнительно не нужно — драйверы USB-CDC у ESP32-C3 обычно \
+ставятся Windows автоматически при первом подключении.
+
+
+КАК ПРОШИТЬ ПЛАТУ
+
+1. Подключите плату к компьютеру USB-кабелем.
+2. Нажмите "Обновить список" и выберите её COM-порт.
+3. Нажмите "Проверить обновления" — программа покажет актуальную
+   версию прошивки (если ещё не проверила сама при запуске).
+4. Нажмите "Прошить плату" и дождитесь надписи "Готово!" в логе.
+   Не отключайте плату во время прошивки.
+
+
+КАК ПОДКЛЮЧИТЬ И ИСПОЛЬЗОВАТЬ ПЛАТУ (после прошивки)
+
+• Плата ESP32-C3 SuperMini соединяется с полётным контроллером по
+  UART (протокол MSP v2): GPIO4 (RX) ← TX контроллера, GPIO5 (TX) →
+  RX контроллера, GND — GND. В Betaflight нужно включить MSP на
+  этом UART и разместить элементы OSD Custom Message 1-4.
+
+• При каждом включении платы первые 30 секунд poднята Wi-Fi точка
+  доступа "AIRSQAD Cam Linker" (пароль 12345678, адрес портала
+  http://10.0.0.1) — там настройки и статус подключения к камере.
+
+• Чтобы привязать GoPro: переведите камеру в режим Bluetooth-
+  сопряжения и на плате зажмите кнопку BOOT примерно на 2 секунды
+  (уже после загрузки, не во время включения!). Дальше плата
+  подключается к привязанной камере автоматически при каждом
+  включении.
+
+Подробное описание всех разделов веб-интерфейса, схемы подключения
+и устранение неполадок — в README.md репозитория проекта.
+
+
+ВЕРСИЯ ПРОШИВКИ
+
+Актуальная версия на момент написания этой справки — {version}.
+Реальную версию проверяйте на странице веб-портала платы (там же,
+где статус подключения) или в этой программе после нажатия
+"Проверить обновления".
+""".format(version=FIRMWARE_VERSION_HINT)
+
 # Палитра — та же тёмная тема, что и веб-портал платы (см. status_portal.h).
 BG = "#2b2b2b"
 BG_PANEL = "#3a3a3a"
@@ -143,9 +197,19 @@ class FlasherApp:
 
         pad = {"padx": 10, "pady": 6}
 
+        # --- Верхняя панель: кнопка-справка в правом верхнем углу ---
+        frm_topbar = tk.Frame(root, bg=BG)
+        frm_topbar.pack(fill="x")
+        help_btn = tk.Button(
+            frm_topbar, text="?", command=self.show_help,
+            bg=BG_PANEL, fg=FG, activebackground=ACCENT, activeforeground="white",
+            bd=0, relief="flat", font=("Segoe UI", 10, "bold"), width=3, cursor="hand2",
+        )
+        help_btn.pack(side="right", padx=10, pady=8)
+
         # --- Шапка: логотип + заголовок по центру (как в веб-портале платы) ---
         frm_header = tk.Frame(root, bg=BG)
-        frm_header.pack(fill="x", pady=(20, 4))
+        frm_header.pack(fill="x", pady=(4, 4))
 
         self._logo_img = None
         try:
@@ -225,6 +289,27 @@ class FlasherApp:
 
         style.configure("TProgressbar", background=ACCENT, troughcolor=BG_PANEL,
                          borderwidth=0, lightcolor=ACCENT, darkcolor=ACCENT)
+
+    def show_help(self):
+        win = tk.Toplevel(self.root, bg=BG)
+        win.title("Справка")
+        win.geometry("520x560")
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+
+        tk.Label(win, text="AIRSQAD Cam Linker — справка", bg=BG, fg=FG,
+                 font=("Segoe UI", 13, "bold")).pack(pady=(16, 4))
+        tk.Label(win, text=f"Версия прошивки: {FIRMWARE_VERSION_HINT}", bg=BG, fg=FG_DIM,
+                 font=("Segoe UI", 9)).pack(pady=(0, 10))
+
+        text = tk.Text(win, wrap="word", bg=LOG_BG, fg=LOG_FG, relief="flat",
+                        borderwidth=0, padx=14, pady=12)
+        text.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        text.insert("end", HELP_TEXT)
+        text.configure(state="disabled")
+
+        ttk.Button(win, text="Закрыть", command=win.destroy).pack(pady=(0, 14))
 
     def log(self, msg, newline=True):
         self.log_queue.put(msg + ("\n" if newline else ""))
